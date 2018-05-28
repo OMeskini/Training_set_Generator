@@ -1,19 +1,27 @@
 import numpy as np
 import cv2 as cv
 import os
-from random import randint, uniform, choice,gauss
+from random import randint, uniform, choice, gauss
 
-
-def random_color():
+#get a random color centred around (r,g,b)
+def random_color(r,g,b):
     u = gauss(0, 1)
     v = gauss(0, 1)
     z = gauss(0, 1)
 
-    R = abs(int(30 * u))
-    G = abs(int(20 * v))
-    B = abs(int(30 * z))
+    R = abs(int(r * u))
+    G = abs(int(g * v))
+    B = abs(int(b * z))
     return (R, G, B)
 
+#create a white image
+def white_img(img):
+        # Create a white image
+        img_white = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)
+        img_white[:] = (255, 255, 255)
+        return img_white
+
+#generate a line of text
 def lineOfText():
     # choose a text
     words = open('/etc/dictionaries-common/words').read().splitlines()
@@ -26,11 +34,13 @@ def lineOfText():
 
     return line
 
+#create a non existant directory
 def create_dir(name_dir):
     if not os.path.exists(name_dir):
         os.makedirs(name_dir)
 
-
+#get random text caracterisitics
+#font, color, fontscale, thickness
 def text_caracteristics(img):
  # list of fonts
         list = [cv.FONT_HERSHEY_SIMPLEX, cv.FONT_HERSHEY_PLAIN, cv.FONT_HERSHEY_SIMPLEX, cv.FONT_HERSHEY_DUPLEX,
@@ -43,7 +53,7 @@ def text_caracteristics(img):
         lineType = randint(1, 5)
 
         # random color
-        fontColor = random_color()
+        fontColor = random_color(30, 20, 30)
 
 
         # in case of little image apply an average fontscale
@@ -63,18 +73,14 @@ class ImageProcessing:
     def __init__(self,img):
         self.img=img
 
-
-    def white_img(self,img):
-        # Create a white image
-        img_white = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)
-        img_white[:] = (255, 255, 255)
-        return img_white
-
-    def draw_text(self, pic, img, img_white, nb_lines, font, fontScale, fontColor, lineType):
+    #draw text
+    def draw_text(self, pic, img, img_white, nb_lines, font, fontScale, fontColor, lineType, nb):
         global text_bottom
         end_lines = 0
         height, weight = img.shape[:2]
 
+        # Create a white image for transparency
+        transparent_img = white_img(img)
         # foreach line
         for j in range(1, nb_lines+1):
 
@@ -88,6 +94,7 @@ class ImageProcessing:
             if (j == 1):
               # Localization of text
               bottom = randint(h_text , height - h_text )
+
               while (w_text>weight):
                 line=line[0:int(len(line)/2)]
                 w_text=w_text/2
@@ -95,17 +102,29 @@ class ImageProcessing:
               text_bottom = bottom-h_text
 
             end_lines = max(left+w_text,end_lines)
+
+            #text position
             bottomLeftCornerOfText = (left, bottom)
 
-            # write the text
-            cv.putText(img, line,
+            #the case of non text_transparency
+            if(nb != 1):
+              # write the text
+              cv.putText(img, line,
                        bottomLeftCornerOfText,
                        font,
                        fontScale,
                        fontColor,
                        lineType)
 
+
             cv.putText(img_white, line,
+                       bottomLeftCornerOfText,
+                       font,
+                       fontScale,
+                       fontColor,
+                       lineType)
+
+            cv.putText(transparent_img, line,
                        bottomLeftCornerOfText,
                        font,
                        fontScale,
@@ -132,4 +151,4 @@ class ImageProcessing:
         if(end_lines>weight):
             end_lines = weight
 
-        return (img, text_bottom, left, bottom, end_lines)
+        return (img, text_bottom, left, bottom, end_lines,transparent_img)

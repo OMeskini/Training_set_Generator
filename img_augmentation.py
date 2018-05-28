@@ -1,22 +1,74 @@
 import sys
-
 sys.path.append('/usr/local/lib/python2.7/site-packages')
+from random import uniform
+
 
 import imgaug as ia
 from imgaug import augmenters as iaa
+
+#blend for transparency
+def blend_transparence(background,beta,foreground):
+
+    h, w, c = background.shape
+
+    for i in range(0, h):
+       for j in range(0, w):
+              for k in range(0, c):
+                  #skip the white pixels
+                  #just blend the pixels of text
+                  if (foreground[i, j, k] != 255):
+                            x=background[i, j, k]
+                            y=foreground[i, j, k]
+                            background[i, j, k] = x * (1-beta) + y * beta
+
+
+
+    return background
+
+
 class Augmentor:
 
 
  def __init__(self):
   self.list_crop = []
+ #blend text with the background
+ #to get text transparency
+ def blending(self,list_images,list_transparent,list_positions):
 
+     # text transparence value
+     alpha = uniform(0.4, 0.9)
+
+     for idx, eachImg in enumerate(list_images):
+         imge = eachImg[1]
+         #get text region
+         crop = imge[(list_positions[idx])[0]:(list_positions[idx])[2],
+                (list_positions[idx])[1]:(list_positions[idx])[3]]
+
+         #probability of having transparent text
+         nb = (list_transparent[idx])[0]
+
+         #case of transparent text
+         if (nb == 1):
+             #get text image
+             transparent = (list_transparent[idx])[1]
+             #text region
+             text = transparent[(list_positions[idx])[0]:(list_positions[idx])[2],
+                    (list_positions[idx])[1]:(list_positions[idx])[3]]
+
+             #apply the blend
+             crop = blend_transparence(crop, alpha, text)
+
+
+         self.list_crop.append(crop)
+
+
+     return self.list_crop
+
+ #augmentation of text
  def img_aug(self,list_images,list_positions):
+
   ia.seed(1)
 
-  for idx, eachImg in enumerate(list_images):
-      imge=eachImg[1]
-      crop=imge[(list_positions[idx])[0]:(list_positions[idx])[2], (list_positions[idx])[1]:(list_positions[idx])[3]]
-      self.list_crop.append(crop)
 
   seq = iaa.Sequential([
 
@@ -83,13 +135,13 @@ class Augmentor:
   True
   )
 # apply augmenters in random order
-
   images_aug = seq.augment_images(self.list_crop)
 
-
-
   aug_images=[]
+
+  #paste the text region into the real picture
   for ind, each_image in enumerate(list_images):
+
       img = each_image[1]
       img[(list_positions[ind])[0]:(list_positions[ind])[2], (list_positions[ind])[1]:(list_positions[ind])[3]]=images_aug[ind]
       aug_images.append([each_image[0],img])
